@@ -64,8 +64,8 @@ func (kf *KubeFlux) PreFilter(ctx context.Context, state *framework.CycleState, 
 	klog.Infof("Examining the pod")
 
 	fluxjbs := jobspec.InspectPodInfo(pod)
-	// filename := "/home/data/jobspecs/jobspec.yaml"
-	filename := fmt.Sprintf("/home/data/jobspecs/jobspec-%s-%s.yaml", time.Now(), pod.Name)
+	currenttime := time.Now()
+	filename := fmt.Sprintf("/home/data/jobspecs/jobspec-%s-%s.yaml", currenttime.Format(time.RFC3339Nano), pod.Name)
 	jobspec.CreateJobSpecYaml(fluxjbs, filename)
 
 	nodename, err := kf.askFlux(ctx, pod, filename)
@@ -104,8 +104,6 @@ func (kf *KubeFlux) PreFilterExtensions() framework.PreFilterExtensions {
 
 func (kf *KubeFlux) askFlux(ctx context.Context, pod *v1.Pod, filename string) (string, error) {
 
-	// filename := fmt.Sprintf("/home/data/jobspecs/jobspec-%s.yaml", time.Now())
-	// filename = "/home/data/jobspecs/jobspec.yaml"
 	spec, err := ioutil.ReadFile(filename)
 	if err != nil {
 		// err := fmt.Errorf("Error reading jobspec file")
