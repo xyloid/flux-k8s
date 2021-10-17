@@ -160,7 +160,7 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	// }
 	klog.Infof("KubeFlux starts")
 
-	return &KubeFlux{handle: handle, fluxctx: fctx, podNameToJobId: make(map[string]C.ulong)}, nil
+	return &KubeFlux{handle: handle, fluxctx: fctx, podNameToJobId: make(map[string]uint64)}, nil
 }
 
 ////// Utility functions
