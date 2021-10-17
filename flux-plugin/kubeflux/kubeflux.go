@@ -33,10 +33,12 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/metrics"
 	"sigs.k8s.io/scheduler-plugins/pkg/kubeflux/jobspec"
 	"sigs.k8s.io/scheduler-plugins/pkg/kubeflux/utils"
+	"sync"
 	"time"
 )
 
 type KubeFlux struct {
+	mutex          sync.Mutex
 	handle         framework.Handle
 	fluxctx        *fluxcli.ReapiCtx
 	podNameToJobId map[string]uint64
@@ -131,7 +133,9 @@ func (kf *KubeFlux) askFlux(ctx context.Context, pod *v1.Pod, filename string) (
 	nodename := fluxcli.ReapiCliGetNode(kf.fluxctx)
 	fmt.Println("nodename ", nodename)
 
+	kf.mutex.Lock()
 	kf.podNameToJobId[pod.Name] = jobid
+	kf.mutex.Unlock()
 
 	fmt.Println("Check job set:")
 	fmt.Println(kf.podNameToJobId)
@@ -217,12 +221,22 @@ func (kf *KubeFlux) updatePod(oldObj, newObj interface{}) {
 
 	if newPod.Namespace == "default" && newPod.Status.Phase == v1.PodSucceeded {
 		fmt.Printf("Must tell kubeflux %s finished\n", newPod.Name)
+
+		kf.mutex.Lock()
+		defer kf.mutex.Unlock()
+
 		jobid := kf.podNameToJobId[newPod.Name]
 
 		// possbile typo in https://github.com/cmisale/flux-sched/blob/gobind-dev/resource/hlapi/bindings/go/src/fluxcli/reapi_cli.go
 		err := fluxcli.ReapiCliCancel(kf.fluxctx, int64(jobid), false)
 
-		fmt.Println("Job cancellation result: %d\n", err)
+		if err == 0 {
+			delete(kf.podNameToJobId, newPod.Name)
+		}
+
+		fmt.Printf("Job cancellation result: %d\n", err)
+		fmt.Println("Check job set: after delete")
+		fmt.Println(kf.podNameToJobId)
 	}
 
 }
