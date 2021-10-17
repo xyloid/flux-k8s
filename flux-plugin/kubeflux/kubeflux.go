@@ -17,6 +17,7 @@ limitations under the License.
 package kubeflux
 
 import (
+	"C"
 	"context"
 	"errors"
 	"fluxcli"
@@ -33,8 +34,9 @@ import (
 )
 
 type KubeFlux struct {
-	handle  framework.Handle
-	fluxctx *fluxcli.ReapiCtx
+	handle         framework.Handle
+	fluxctx        *fluxcli.ReapiCtx
+	podNameToJobId map[string]C.ulong
 }
 
 var _ framework.PreFilterPlugin = &KubeFlux{}
@@ -154,7 +156,7 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	// }
 	klog.Infof("KubeFlux starts")
 
-	return &KubeFlux{handle: handle, fluxctx: fctx}, nil
+	return &KubeFlux{handle: handle, fluxctx: fctx, podNameToJobId: make(map[string]C.ulong)}, nil
 }
 
 ////// Utility functions
