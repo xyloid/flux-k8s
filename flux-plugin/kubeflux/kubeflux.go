@@ -128,6 +128,11 @@ func (kf *KubeFlux) askFlux(ctx context.Context, pod *v1.Pod, filename string) (
 	nodename := fluxcli.ReapiCliGetNode(kf.fluxctx)
 	fmt.Println("nodename ", nodename)
 
+	kf.podNameToJobId[pod.Name] = jobid
+
+	fmt.Println("Check job set:")
+	fmt.Println(kf.podNameToJobId)
+
 	return nodename, nil
 }
 
