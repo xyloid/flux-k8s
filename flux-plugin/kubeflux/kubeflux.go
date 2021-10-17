@@ -17,7 +17,6 @@ limitations under the License.
 package kubeflux
 
 import (
-	"C"
 	"context"
 	"errors"
 	"fluxcli"
@@ -36,7 +35,7 @@ import (
 type KubeFlux struct {
 	handle         framework.Handle
 	fluxctx        *fluxcli.ReapiCtx
-	podNameToJobId map[string]C.ulong
+	podNameToJobId map[string]uint64
 }
 
 var _ framework.PreFilterPlugin = &KubeFlux{}
