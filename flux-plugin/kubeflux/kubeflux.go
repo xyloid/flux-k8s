@@ -163,6 +163,23 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	return &KubeFlux{handle: handle, fluxctx: fctx, podNameToJobId: make(map[string]uint64)}, nil
 }
 
+////// EventHandlers
+
+func (kf *KubeFlux) addPod(obj interface{}) {
+	fmt.Println("add Pod event handler")
+	fmt.Println(obj)
+}
+
+func (kf *KubeFlux) updatePod(oldObj, newObj interface{}) {
+	fmt.Println("update Pod event handler")
+	fmt.Println(oldObj)
+}
+
+func (kf *KubeFlux) deletePod(obj interface{}) {
+	fmt.Println("delete Pod event handler")
+	fmt.Println(obj)
+}
+
 ////// Utility functions
 func printOutput(reserved bool, allocated string, at int64, pre uint32, post uint32, overhead float64, jobid uint64, fluxerr int) {
 	fmt.Println("\n\t----Match Allocate output---")
