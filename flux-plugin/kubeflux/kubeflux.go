@@ -162,6 +162,7 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	// TODO: create informer
 	factory := informers.NewSharedInformerFactory(clientset, 0)
 	podInformer := factory.Core().V1().Pods().Informer()
+	nodeInformer := factory.Core().V1().Nodes().Informer()
 
 	fctx := fluxcli.NewReapiCli()
 	fmt.Println("Created cli context ", fctx)
@@ -194,9 +195,17 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 		DeleteFunc: kf.deletePod,
 	})
 
+	nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    kf.addNode,
+		UpdateFunc: kf.updateNode,
+		DeleteFunc: kf.deleteNode,
+	})
+
 	// TODO: this informer can not be stopped politely
-	stopper := make(chan struct{})
-	go podInformer.Run(stopper)
+	stopPodInformer := make(chan struct{})
+	go podInformer.Run(stopPodInformer)
+	stopNodeInformer := make(chan struct{})
+	go nodeInformer.Run(stopNodeInformer)
 
 	return kf, nil
 }
@@ -252,6 +261,29 @@ func (kf *KubeFlux) deletePod(obj interface{}) {
 	pod := obj.(*v1.Pod)
 	fmt.Println(pod)
 	fmt.Println(pod.Name, pod.Status)
+}
+
+func (kf *KubeFlux) addNode(obj interface{}) {
+	fmt.Println("add Node event handler")
+	node := obj.(*v1.Node)
+	fmt.Println(node.Name)
+	fmt.Println(node)
+}
+
+func (kf *KubeFlux) updateNode(oldObj, newObj interface{}) {
+	fmt.Println("update Node event handler")
+	oldNode := oldObj.(*v1.Node)
+	newNode := newObj.(*v1.Node)
+	fmt.Println(newNode.Name)
+	fmt.Println(oldNode)
+	fmt.Println(newNode)
+}
+
+func (kf *KubeFlux) deleteNode(obj interface{}) {
+	fmt.Println("delete Node event handler")
+	node := obj.(*v1.Node)
+	fmt.Println(node.Name)
+	fmt.Println(node)
 }
 
 ////// Utility functions
