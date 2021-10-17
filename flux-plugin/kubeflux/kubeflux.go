@@ -225,18 +225,24 @@ func (kf *KubeFlux) updatePod(oldObj, newObj interface{}) {
 		kf.mutex.Lock()
 		defer kf.mutex.Unlock()
 
-		jobid := kf.podNameToJobId[newPod.Name]
+		if jobid, ok := kf.podNameToJobId[newPod.Name]; ok {
+			// possbile typo in https://github.com/cmisale/flux-sched/blob/gobind-dev/resource/hlapi/bindings/go/src/fluxcli/reapi_cli.go
+			err := fluxcli.ReapiCliCancel(kf.fluxctx, int64(jobid), false)
 
-		// possbile typo in https://github.com/cmisale/flux-sched/blob/gobind-dev/resource/hlapi/bindings/go/src/fluxcli/reapi_cli.go
-		err := fluxcli.ReapiCliCancel(kf.fluxctx, int64(jobid), false)
+			if err == 0 {
+				delete(kf.podNameToJobId, newPod.Name)
+			} else {
+				fmt.Printf("Failed to delete pod %s from the pdoname-jobid map.\n", newPod.Name)
+			}
 
-		if err == 0 {
-			delete(kf.podNameToJobId, newPod.Name)
+			fmt.Printf("Job cancellation result: %d\n", err)
+			fmt.Println("Check job set: after delete")
+			fmt.Println(kf.podNameToJobId)
+		} else {
+			fmt.Printf("Succeeded pod %s/%s doesn't have flux jobid\n", newPod.Namespace, newPod.Name)
+
 		}
 
-		fmt.Printf("Job cancellation result: %d\n", err)
-		fmt.Println("Check job set: after delete")
-		fmt.Println(kf.podNameToJobId)
 	}
 
 }
