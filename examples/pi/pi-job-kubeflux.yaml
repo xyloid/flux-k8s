@@ -25,8 +25,8 @@ spec:
         # imagePullPolicy: Never # kind local needs to pull image from local registry
         resources:
           limits:
-            cpu: "8"
+            cpu: "8" # For "8.5", it becomes 9 in JobSpec
           requests:
-            cpu: "8"
+            cpu: "8" # For "8.5", it becomes 9 in JobSpec
       restartPolicy: Never
       
