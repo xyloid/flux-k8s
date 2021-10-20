@@ -38,10 +38,11 @@ import (
 )
 
 type KubeFlux struct {
-	mutex          sync.Mutex
-	handle         framework.Handle
-	fluxctx        *fluxcli.ReapiCtx
-	podNameToJobId map[string]uint64
+	mutex           sync.Mutex
+	handle          framework.Handle
+	fluxctx         *fluxcli.ReapiCtx
+	podNameToJobId  map[string]uint64
+	jobidToNodeName map[uint64]string
 }
 
 var _ framework.PreFilterPlugin = &KubeFlux{}
@@ -111,6 +112,23 @@ func (kf *KubeFlux) PreFilterExtensions() framework.PreFilterExtensions {
 
 func (kf *KubeFlux) askFlux(ctx context.Context, pod *v1.Pod, filename string) (string, error) {
 
+	// clean up previous match if a pod has already allocated previously
+	if previousJobid, ok := kf.podNameToJobId[pod.Name]; ok {
+		fmt.Println("Clean up previous allocation")
+		err := fluxcli.ReapiCliCancel(kf.fluxctx, int64(previousJobid), false)
+
+		if err == 0 {
+			delete(kf.podNameToJobId, pod.Name)
+			delete(kf.jobidToNodeName, previousJobid)
+		} else {
+			fmt.Printf("Failed to delete pod %s from the podname-jobid map.\n", pod.Name)
+		}
+
+		fmt.Printf("Job cancellation result: %d\n", err)
+		fmt.Println("Check job set: after delete")
+		fmt.Println(kf.podNameToJobId)
+	}
+
 	spec, err := ioutil.ReadFile(filename)
 	if err != nil {
 		// err := fmt.Errorf("Error reading jobspec file")
@@ -134,7 +152,9 @@ func (kf *KubeFlux) askFlux(ctx context.Context, pod *v1.Pod, filename string) (
 	fmt.Println("nodename ", nodename)
 
 	kf.mutex.Lock()
+	// TODO: bug, the pod could have been scheduled by kubeflux already, but k8s failed to execute it because of insufficient cpu. Confusing.
 	kf.podNameToJobId[pod.Name] = jobid
+	kf.jobidToNodeName[jobid] = nodename
 	kf.mutex.Unlock()
 
 	fmt.Println("Check job set:")
@@ -187,7 +207,7 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	// }
 	klog.Infof("KubeFlux starts")
 
-	kf := &KubeFlux{handle: handle, fluxctx: fctx, podNameToJobId: make(map[string]uint64)}
+	kf := &KubeFlux{handle: handle, fluxctx: fctx, podNameToJobId: make(map[string]uint64), jobidToNodeName: make(map[uint64]string)}
 
 	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    kf.addPod,
@@ -240,8 +260,9 @@ func (kf *KubeFlux) updatePod(oldObj, newObj interface{}) {
 
 			if err == 0 {
 				delete(kf.podNameToJobId, newPod.Name)
+				delete(kf.jobidToNodeName, jobid)
 			} else {
-				fmt.Printf("Failed to delete pod %s from the pdoname-jobid map.\n", newPod.Name)
+				fmt.Printf("Failed to delete pod %s from the podname-jobid map.\n", newPod.Name)
 			}
 
 			fmt.Printf("Job cancellation result: %d\n", err)

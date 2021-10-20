@@ -5,7 +5,7 @@ kind: Job
 metadata:
   name: pi-job-default-sched
 spec:
-  completions: 4
+  completions: 1
   # selector:
   #   matchLabels:
   #     app: pi-test
