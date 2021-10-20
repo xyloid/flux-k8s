@@ -113,20 +113,13 @@ func (kf *KubeFlux) PreFilterExtensions() framework.PreFilterExtensions {
 func (kf *KubeFlux) askFlux(ctx context.Context, pod *v1.Pod, filename string) (string, error) {
 
 	// clean up previous match if a pod has already allocated previously
-	if previousJobid, ok := kf.podNameToJobId[pod.Name]; ok {
+	if _, ok := kf.podNameToJobId[pod.Name]; ok {
+		// clean up and reschedule or use the previous assigned nodename?
+
 		fmt.Println("Clean up previous allocation")
-		err := fluxcli.ReapiCliCancel(kf.fluxctx, int64(previousJobid), false)
-
-		if err == 0 {
-			delete(kf.podNameToJobId, pod.Name)
-			delete(kf.jobidToNodeName, previousJobid)
-		} else {
-			fmt.Printf("Failed to delete pod %s from the podname-jobid map.\n", pod.Name)
-		}
-
-		fmt.Printf("Job cancellation result: %d\n", err)
-		fmt.Println("Check job set: after delete")
-		fmt.Println(kf.podNameToJobId)
+		kf.mutex.Lock()
+		kf.cancelFluxJobForPod(pod.Name)
+		kf.mutex.Unlock()
 	}
 
 	spec, err := ioutil.ReadFile(filename)
@@ -161,6 +154,23 @@ func (kf *KubeFlux) askFlux(ctx context.Context, pod *v1.Pod, filename string) (
 	fmt.Println(kf.podNameToJobId)
 
 	return nodename, nil
+}
+
+func (kf *KubeFlux) cancelFluxJobForPod(podName string) {
+	jobid := kf.podNameToJobId[podName]
+	// possbile typo in https://github.com/cmisale/flux-sched/blob/gobind-dev/resource/hlapi/bindings/go/src/fluxcli/reapi_cli.go
+	err := fluxcli.ReapiCliCancel(kf.fluxctx, int64(jobid), false)
+
+	if err == 0 {
+		delete(kf.podNameToJobId, podName)
+		delete(kf.jobidToNodeName, jobid)
+	} else {
+		fmt.Printf("Failed to delete pod %s from the podname-jobid map.\n", podName)
+	}
+
+	fmt.Printf("Job cancellation for pod %s result: %d\n", podName, err)
+	fmt.Println("Check job set: after delete")
+	fmt.Println(kf.podNameToJobId)
 }
 
 // initialize and return a new Flux Plugin
@@ -254,27 +264,14 @@ func (kf *KubeFlux) updatePod(oldObj, newObj interface{}) {
 		kf.mutex.Lock()
 		defer kf.mutex.Unlock()
 
-		if jobid, ok := kf.podNameToJobId[newPod.Name]; ok {
-			// possbile typo in https://github.com/cmisale/flux-sched/blob/gobind-dev/resource/hlapi/bindings/go/src/fluxcli/reapi_cli.go
-			err := fluxcli.ReapiCliCancel(kf.fluxctx, int64(jobid), false)
-
-			if err == 0 {
-				delete(kf.podNameToJobId, newPod.Name)
-				delete(kf.jobidToNodeName, jobid)
-			} else {
-				fmt.Printf("Failed to delete pod %s from the podname-jobid map.\n", newPod.Name)
-			}
-
-			fmt.Printf("Job cancellation result: %d\n", err)
-			fmt.Println("Check job set: after delete")
-			fmt.Println(kf.podNameToJobId)
+		if _, ok := kf.podNameToJobId[newPod.Name]; ok {
+			kf.cancelFluxJobForPod(newPod.Name)
 		} else {
 			fmt.Printf("Succeeded pod %s/%s doesn't have flux jobid\n", newPod.Namespace, newPod.Name)
 
 		}
 
 	}
-
 }
 
 func (kf *KubeFlux) deletePod(obj interface{}) {
