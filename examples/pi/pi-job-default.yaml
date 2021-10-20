@@ -5,7 +5,7 @@ kind: Job
 metadata:
   name: pi-job-default-sched
 spec:
-  completions: 1
+  completions: 4
   # selector:
   #   matchLabels:
   #     app: pi-test
@@ -23,8 +23,8 @@ spec:
         # imagePullPolicy: Never # kind local needs to pull image from local registry
         resources:
           limits:
-            cpu: "8"
+            cpu: "12"
           requests:
-            cpu: "8"
+            cpu: "12"
       restartPolicy: Never
       
