@@ -258,7 +258,25 @@ func (kf *KubeFlux) updatePod(oldObj, newObj interface{}) {
 	fmt.Println(oldPod.Name, oldPod.Status)
 	fmt.Println(newPod.Name, newPod.Status)
 
-	if newPod.Namespace == "default" && newPod.Status.Phase == v1.PodSucceeded {
+	// if newPod.Status.Phase == v1.PodSucceeded {
+	// 	fmt.Printf("Must tell kubeflux %s finished\n", newPod.Name)
+
+	// 	kf.mutex.Lock()
+	// 	defer kf.mutex.Unlock()
+
+	// 	if _, ok := kf.podNameToJobId[newPod.Name]; ok {
+	// 		kf.cancelFluxJobForPod(newPod.Name)
+	// 	} else {
+	// 		fmt.Printf("Succeeded pod %s/%s doesn't have flux jobid\n", newPod.Namespace, newPod.Name)
+	// 	}
+	// }
+
+	switch newPod.Status.Phase {
+	case v1.PodPending:
+		// in this state we don't know if a pod is going to be running
+	case v1.PodRunning:
+		// if a pod is start running, we can add it state to the delta graph
+	case v1.PodSucceeded:
 		fmt.Printf("Must tell kubeflux %s finished\n", newPod.Name)
 
 		kf.mutex.Lock()
@@ -268,10 +286,15 @@ func (kf *KubeFlux) updatePod(oldObj, newObj interface{}) {
 			kf.cancelFluxJobForPod(newPod.Name)
 		} else {
 			fmt.Printf("Succeeded pod %s/%s doesn't have flux jobid\n", newPod.Namespace, newPod.Name)
-
 		}
-
+	case v1.PodFailed:
+		// a corner case need to be tested, the pod exit code is not 0, can be created with segmentation fault pi test
+	case v1.PodUnknown:
+		// don't know how to deal with it
+	default:
+		// shouldn't enter this branch
 	}
+
 }
 
 func (kf *KubeFlux) deletePod(obj interface{}) {
