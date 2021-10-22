@@ -130,7 +130,7 @@ func (kf *KubeFlux) askFlux(ctx context.Context, pod *v1.Pod, filename string) (
 	start := time.Now()
 	reserved, allocated, at, pre, post, overhead, jobid, fluxerr := fluxcli.ReapiCliMatchAllocate(kf.fluxctx, false, string(spec))
 	elapsed := metrics.SinceInSeconds(start)
-	fmt.Println("Time elapsed: ", elapsed)
+	fmt.Println("Time elapsed (Match Allocate) :", elapsed)
 	if fluxerr != 0 {
 		// err := fmt.Errorf("Error in ReapiCliMatchAllocate")
 		return "", errors.New("Error in ReapiCliMatchAllocate")
@@ -209,7 +209,10 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 		return nil, err
 	}
 
+	start := time.Now()
 	fluxcli.ReapiCliInit(fctx, string(jgf))
+	elapsed := metrics.SinceInSeconds(start)
+	fmt.Println("Time elapsed (Cli Init with Graph) :", elapsed)
 
 	// if ret != 0 {
 	// 	fmt.Println("Error while initializing ReapiCli")
@@ -283,7 +286,10 @@ func (kf *KubeFlux) updatePod(oldObj, newObj interface{}) {
 		defer kf.mutex.Unlock()
 
 		if _, ok := kf.podNameToJobId[newPod.Name]; ok {
+			start := time.Now()
 			kf.cancelFluxJobForPod(newPod.Name)
+			elapsed := metrics.SinceInSeconds(start)
+			fmt.Println("Time elapsed (Cancel Job) :", elapsed)
 		} else {
 			fmt.Printf("Succeeded pod %s/%s doesn't have flux jobid\n", newPod.Namespace, newPod.Name)
 		}
