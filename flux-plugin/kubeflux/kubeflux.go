@@ -38,11 +38,10 @@ import (
 )
 
 type KubeFlux struct {
-	mutex           sync.Mutex
-	handle          framework.Handle
-	fluxctx         *fluxcli.ReapiCtx
-	podNameToJobId  map[string]uint64
-	jobidToNodeName map[uint64]string
+	mutex          sync.Mutex
+	handle         framework.Handle
+	fluxctx        *fluxcli.ReapiCtx
+	podNameToJobId map[string]uint64
 }
 
 var _ framework.PreFilterPlugin = &KubeFlux{}
@@ -147,7 +146,6 @@ func (kf *KubeFlux) askFlux(ctx context.Context, pod *v1.Pod, filename string) (
 	kf.mutex.Lock()
 	// TODO: bug, the pod could have been scheduled by kubeflux already, but k8s failed to execute it because of insufficient cpu. Confusing.
 	kf.podNameToJobId[pod.Name] = jobid
-	kf.jobidToNodeName[jobid] = nodename
 	kf.mutex.Unlock()
 
 	fmt.Println("Check job set:")
@@ -163,7 +161,6 @@ func (kf *KubeFlux) cancelFluxJobForPod(podName string) {
 
 	if err == 0 {
 		delete(kf.podNameToJobId, podName)
-		delete(kf.jobidToNodeName, jobid)
 	} else {
 		fmt.Printf("Failed to delete pod %s from the podname-jobid map.\n", podName)
 	}
@@ -220,7 +217,7 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	// }
 	klog.Infof("KubeFlux starts")
 
-	kf := &KubeFlux{handle: handle, fluxctx: fctx, podNameToJobId: make(map[string]uint64), jobidToNodeName: make(map[uint64]string)}
+	kf := &KubeFlux{handle: handle, fluxctx: fctx, podNameToJobId: make(map[string]uint64)}
 
 	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    kf.addPod,
@@ -295,6 +292,19 @@ func (kf *KubeFlux) updatePod(oldObj, newObj interface{}) {
 		}
 	case v1.PodFailed:
 		// a corner case need to be tested, the pod exit code is not 0, can be created with segmentation fault pi test
+		fmt.Printf("Must tell kubeflux %s failed to free the resources\n", newPod.Name)
+
+		kf.mutex.Lock()
+		defer kf.mutex.Unlock()
+
+		if _, ok := kf.podNameToJobId[newPod.Name]; ok {
+			start := time.Now()
+			kf.cancelFluxJobForPod(newPod.Name)
+			elapsed := metrics.SinceInSeconds(start)
+			fmt.Println("Time elapsed (Cancel Job) :", elapsed)
+		} else {
+			fmt.Printf("Failed pod %s/%s doesn't have flux jobid\n", newPod.Namespace, newPod.Name)
+		}
 	case v1.PodUnknown:
 		// don't know how to deal with it
 	default:
