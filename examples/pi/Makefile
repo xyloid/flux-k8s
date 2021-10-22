@@ -5,6 +5,8 @@ DOCKER_IMAGE_TAG=${GITVERSION}
 
 DOCKER_IMAGE=${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
 
+DOCKER_SEGFAULT_IMAGE_NAME=pi-segfault
+DOCKER_SEGFAULT_IMAGE=${DOCKER_SEGFAULT_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
 
 all:: build-image
 
@@ -16,9 +18,19 @@ build-image:
 	docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_NAME}:latest
 	docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} localhost:5000/${DOCKER_IMAGE_NAME}:latest
 
+build-segfault-image:
+	@echo "Building Docker image (pi-segfault)...";
+	docker build -t ${DOCKER_SEGFAULT_IMAGE_NAME}:${DOCKER_IMAGE_TAG} -f Dockerfile.segfault .
+	docker tag ${DOCKER_SEGFAULT_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_SEGFAULT_IMAGE_NAME}:latest
+	docker tag ${DOCKER_SEGFAULT_IMAGE_NAME}:${DOCKER_IMAGE_TAG} localhost:5000/${DOCKER_SEGFAULT_IMAGE_NAME}:latest
+
 push-image-local:
 	@echo "Pushing Docker image..."; 
 	docker push localhost:5000/${DOCKER_IMAGE_NAME}:latest
+
+push-segfault-image-local:
+	@echo "Pushing Docker image (pi-segfault)..."; 
+	docker push localhost:5000/${DOCKER_SEGFAULT_IMAGE_NAME}:latest
 
 push-image:
 	@echo "Pushing Docker image..."; 

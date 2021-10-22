@@ -1,0 +1,32 @@
+# apiVersion: apps/v1
+# kind: Deployment
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi-job-kubeflux-sched-segfault
+spec:
+  completions: 4
+  # selector:
+  #   matchLabels:
+  #     app: pi-test
+  # replicas: 2 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: pi-test-kubeflux-segfault
+    spec:
+      schedulerName: scheduling-plugin # comment this out to get it scheduled by the default scheduler
+      # schedulerName: scheduler-plugins-scheduler # doesn't work
+      containers:
+      - name: pi-test
+        image: localhost:5000/pi-segfault:latest # kind with local registry
+        # image: xuyilindocker/testing:latest # minikube
+        # image: pi:latest # eval $(minikube docker-env)
+        # imagePullPolicy: Never # kind local needs to pull image from local registry
+        resources:
+          limits:
+            cpu: "8" # For "8.5", it becomes 9 in JobSpec
+          requests:
+            cpu: "8" # For "8.5", it becomes 9 in JobSpec
+      restartPolicy: Never
+      
