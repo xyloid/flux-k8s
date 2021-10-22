@@ -273,9 +273,9 @@ func (kf *KubeFlux) updatePod(oldObj, newObj interface{}) {
 
 	switch newPod.Status.Phase {
 	case v1.PodPending:
-		// in this state we don't know if a pod is going to be running
+		// in this state we don't know if a pod is going to be running, thus we don't need to update job map
 	case v1.PodRunning:
-		// if a pod is start running, we can add it state to the delta graph
+		// if a pod is start running, we can add it state to the delta graph if it is scheduled by other scheduler
 	case v1.PodSucceeded:
 		fmt.Printf("Must tell kubeflux %s finished\n", newPod.Name)
 
