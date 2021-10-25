@@ -156,7 +156,11 @@ func (kf *KubeFlux) askFlux(ctx context.Context, pod *v1.Pod, filename string) (
 
 func (kf *KubeFlux) cancelFluxJobForPod(podName string) {
 	jobid := kf.podNameToJobId[podName]
+
+	fmt.Printf("Cancel flux job: %v for pod %s\n", jobid, podName)
+
 	// possbile typo in https://github.com/cmisale/flux-sched/blob/gobind-dev/resource/hlapi/bindings/go/src/fluxcli/reapi_cli.go
+	start := time.Now()
 	err := fluxcli.ReapiCliCancel(kf.fluxctx, int64(jobid), false)
 
 	if err == 0 {
@@ -164,6 +168,9 @@ func (kf *KubeFlux) cancelFluxJobForPod(podName string) {
 	} else {
 		fmt.Printf("Failed to delete pod %s from the podname-jobid map.\n", podName)
 	}
+
+	elapsed := metrics.SinceInSeconds(start)
+	fmt.Println("Time elapsed (Cancel Job) :", elapsed)
 
 	fmt.Printf("Job cancellation for pod %s result: %d\n", podName, err)
 	fmt.Println("Check job set: after delete")
@@ -258,50 +265,31 @@ func (kf *KubeFlux) updatePod(oldObj, newObj interface{}) {
 	fmt.Println(oldPod.Name, oldPod.Status)
 	fmt.Println(newPod.Name, newPod.Status)
 
-	// if newPod.Status.Phase == v1.PodSucceeded {
-	// 	fmt.Printf("Must tell kubeflux %s finished\n", newPod.Name)
-
-	// 	kf.mutex.Lock()
-	// 	defer kf.mutex.Unlock()
-
-	// 	if _, ok := kf.podNameToJobId[newPod.Name]; ok {
-	// 		kf.cancelFluxJobForPod(newPod.Name)
-	// 	} else {
-	// 		fmt.Printf("Succeeded pod %s/%s doesn't have flux jobid\n", newPod.Namespace, newPod.Name)
-	// 	}
-	// }
-
 	switch newPod.Status.Phase {
 	case v1.PodPending:
 		// in this state we don't know if a pod is going to be running, thus we don't need to update job map
 	case v1.PodRunning:
 		// if a pod is start running, we can add it state to the delta graph if it is scheduled by other scheduler
 	case v1.PodSucceeded:
-		fmt.Printf("Must tell kubeflux %s finished\n", newPod.Name)
+		fmt.Printf("Pod %s succeeded, kubeflux needs to free the resources\n", newPod.Name)
 
 		kf.mutex.Lock()
 		defer kf.mutex.Unlock()
 
 		if _, ok := kf.podNameToJobId[newPod.Name]; ok {
-			start := time.Now()
 			kf.cancelFluxJobForPod(newPod.Name)
-			elapsed := metrics.SinceInSeconds(start)
-			fmt.Println("Time elapsed (Cancel Job) :", elapsed)
 		} else {
 			fmt.Printf("Succeeded pod %s/%s doesn't have flux jobid\n", newPod.Namespace, newPod.Name)
 		}
 	case v1.PodFailed:
 		// a corner case need to be tested, the pod exit code is not 0, can be created with segmentation fault pi test
-		fmt.Printf("Must tell kubeflux %s failed to free the resources\n", newPod.Name)
+		fmt.Printf("Pod %s failed, kubeflux needs to free the resources\n", newPod.Name)
 
 		kf.mutex.Lock()
 		defer kf.mutex.Unlock()
 
 		if _, ok := kf.podNameToJobId[newPod.Name]; ok {
-			start := time.Now()
 			kf.cancelFluxJobForPod(newPod.Name)
-			elapsed := metrics.SinceInSeconds(start)
-			fmt.Println("Time elapsed (Cancel Job) :", elapsed)
 		} else {
 			fmt.Printf("Failed pod %s/%s doesn't have flux jobid\n", newPod.Namespace, newPod.Name)
 		}
