@@ -210,8 +210,9 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	}
 
 	start := time.Now()
-	fluxcli.ReapiCliInit(fctx, string(jgf))
+	overhead, _ := fluxcli.ReapiCliInit(fctx, string(jgf))
 	elapsed := metrics.SinceInSeconds(start)
+	fmt.Println("Time elapsed in fluxion (Cli Init with Graph) :", overhead)
 	fmt.Println("Time elapsed (Cli Init with Graph) :", elapsed)
 
 	// if ret != 0 {

@@ -8,4 +8,4 @@ WORKDIR Pi
 RUN g++ -fopenmp pi.c -o pi
 RUN cp pi /bin
 
-ENTRYPOINT ["pi","5000"]
+ENTRYPOINT ["pi","10000"]
