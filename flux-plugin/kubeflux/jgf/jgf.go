@@ -17,7 +17,6 @@ package jgf
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
