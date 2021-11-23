@@ -17,6 +17,7 @@ package jgf
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -350,13 +351,14 @@ func (g *Fluxjgf) WriteJGF(path string) error {
 	encodedJGF, err := json.MarshalIndent(g, "", "  ")
 
 	if err != nil {
+		log.Println(err)
 		log.Fatalf("[JGF] json.Marshal failed with '%s'\n", err)
 		return err
 	}
 
 	f, err := os.Create(path)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		log.Fatalf("[JGF] Couldn't create JGF file!!\n")
 		return err
 	}
@@ -364,6 +366,7 @@ func (g *Fluxjgf) WriteJGF(path string) error {
 
 	_, err = f.Write(encodedJGF)
 	if err != nil {
+		log.Println(err)
 		log.Fatalf("[JGF] Couldn't write JGF file!!\n")
 		return err
 	}
