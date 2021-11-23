@@ -8,6 +8,8 @@ DOCKER_IMAGE=${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
 DOCKER_SEGFAULT_IMAGE_NAME=pi-segfault
 DOCKER_SEGFAULT_IMAGE=${DOCKER_SEGFAULT_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
 
+DOCKERHUB_ID=xuyilindocker
+
 all:: build-image
 
 clean:: clean-image
@@ -35,6 +37,14 @@ push-segfault-image-local:
 push-image:
 	@echo "Pushing Docker image..."; 
 	docker push ${DOCKER_IMAGE_NAME}:latest
+	docker push ${DOCKER_SEGFAULT_IMAGE_NAME}:latest
+
+push-image-dockerhub:
+	@echo "Pushing Docker image..."; 
+	docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKERHUB_ID}/${DOCKER_IMAGE_NAME}:latest
+	docker push ${DOCKERHUB_ID}/${DOCKER_IMAGE_NAME}:latest
+	docker tag ${DOCKER_SEGFAULT_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKERHUB_ID}/${DOCKER_SEGFAULT_IMAGE_NAME}:latest
+	docker push ${DOCKERHUB_ID}/${DOCKER_SEGFAULT_IMAGE_NAME}:latest
 
 clean-image:
 	@echo "Cleaning Docker image...";
