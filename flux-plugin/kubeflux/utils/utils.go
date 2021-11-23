@@ -88,6 +88,8 @@ func CreateJGF(handle framework.Handle, filename string) error {
 	fmt.Println("Time elapsed (CreateJGF) :", elapsed)
 	err = fluxgraph.WriteJGF(filename)
 	if err != nil {
+		fmt.Println("WriteJGF failed")
+		fmt.Println(err)
 		return err
 	}
 	elapsed_write := metrics.SinceInSeconds(start)
