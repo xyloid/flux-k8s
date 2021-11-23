@@ -112,7 +112,6 @@ func processLabels(labels *map[string]string, filter string) (filtered map[strin
 	return
 }
 
-
 func (g *Fluxjgf) MakeSubnet(index int, ip string) string {
 	newnode := node{
 		Id: strconv.Itoa(g.Elements),
@@ -357,6 +356,7 @@ func (g *Fluxjgf) WriteJGF(path string) error {
 
 	f, err := os.Create(path)
 	if err != nil {
+		fmt.Println(err)
 		log.Fatalf("[JGF] Couldn't create JGF file!!\n")
 		return err
 	}
